@@ -23,8 +23,6 @@ jobs:
 
     - name: Build
       run: CGO_ENABLED=0 go build -ldflags="-s -w -extldflags '-static'" -v ./...
-      working-directory: ./napi
 
     - name: Test
       run: go test -v ./...
-      working-directory: ./napi
