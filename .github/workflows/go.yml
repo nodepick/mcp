@@ -29,9 +29,10 @@ jobs:
     - name: Test and Build
       run: |
         go test -v ./...
-        CGO_ENABLED=0 go build -o ./dist -ldflags="-s -w -extldflags '-static'" -v ./...
-        ls -la
-
+        mkdir -p ./dist
+        CGO_ENABLED=0 go build -o ./dist/nmcpd.x86_64 -ldflags="-s -w -extldflags '-static'" -v ./cmd/nmcpd
+        ls -la ./dist
+        
     - name: Publish GitHub Release
       uses: softprops/action-gh-release@v2
       with:
