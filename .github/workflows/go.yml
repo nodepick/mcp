@@ -29,13 +29,12 @@ jobs:
     - name: Test and Build
       run: |
         go test -v ./...
-        CGO_ENABLED=0 go build -ldflags="-s -w -extldflags '-static'" -v ./...
+        CGO_ENABLED=0 go build -o dist/nmcpd.x86_64 -ldflags="-s -w -extldflags '-static'" -v ./...
 
     - name: Publish GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-          files: release-artifact.zip
-          body_path: CHANGELOG.md  # Optional: points to a file with your changelog
+          files: dist/nmcpd.x86_64
           draft: false
           prerelease: true
       env:
