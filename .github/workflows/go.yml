@@ -4,6 +4,13 @@
 name: Build and Publish Release
 
 on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual run'
+        required: false
+        default: 'Manual execution'
+
   push:
     tags:
       - 'v*'
