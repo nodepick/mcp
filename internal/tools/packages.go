@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"nmcpd/internal/mcp"
+	"mcpd/internal/mcp"
 )
 
 // DetectPackageManager attempts to find the system package manager.

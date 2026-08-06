@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"time"
 
-	"nmcpd/internal/mcp"
+	"mcpd/internal/mcp"
 )
 
 // GetCommandExecToolDefinition returns the MCP Tool definition for executing Linux commands.

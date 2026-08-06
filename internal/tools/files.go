@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"nmcpd/internal/mcp"
+	"mcpd/internal/mcp"
 )
 
 // GetFilesToolDefinitions returns MCP definitions for all file tools.

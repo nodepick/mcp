@@ -1,6 +1,6 @@
-# nmcpd (Node VM Management MCP Server)
+# mcpd (Node VM Management MCP Server)
 
-`nmcpd` is a lightweight Model Context Protocol (MCP) server written in Golang. It acts as a standard, secure entry point for AI agents (such as Claude, Gemini, or other host-level clients) to programmatically manage and configure Linux operating systems running inside virtual machines.
+`mcpd` is a lightweight Model Context Protocol (MCP) server written in Golang. It acts as a standard, secure entry point for AI agents (such as Claude, Gemini, or other host-level clients) to programmatically manage and configure Linux operating systems running inside virtual machines.
 
 It is built using the official [Model Context Protocol Go SDK](https://github.com/modelcontextprotocol/go-sdk), ensuring compliance with the latest MCP specification protocol versions (including the `2026-07-28` protocol iteration).
 
@@ -18,7 +18,7 @@ It is built using the official [Model Context Protocol Go SDK](https://github.co
 
 ## 🛠️ Expose MCP Tools
 
-`nmcpd` registers and exposes the following tools:
+`mcpd` registers and exposes the following tools:
 
 ### Package Management
 
@@ -93,26 +93,26 @@ Prerequisite: Go 1.25 or newer.
 
 To build the static production binary, run:
 ```bash
-go build -o nmcpd ./cmd/nmcpd
+go build -o mcpd ./cmd/mcpd
 ```
 
 ### Install in VM
-Copy the generated `nmcpd` binary to the virtual machine (for example, to `/usr/local/bin/nmcpd`):
+Copy the generated `mcpd` binary to the virtual machine (for example, to `/usr/local/bin/mcpd`):
 ```bash
-scp nmcpd user@vm-ip:/usr/local/bin/nmcpd
+scp mcpd user@vm-ip:/usr/local/bin/mcpd
 ```
 
 Ensure the binary has executable permissions inside the VM:
 ```bash
-chmod +x /usr/local/bin/nmcpd
+chmod +x /usr/local/bin/mcpd
 ```
 
 ---
 
-## 🖥️ Running & Using nmcpd
+## 🖥️ Running & Using mcpd
 
-`nmcpd` has two execution modes:
-1. **Background Daemon Mode (Default)**: Best for running permanently inside the VM (e.g., at boot time). It automatically forks itself into the background, boots the secure HTTPS server, and redirects logs to `/var/log/nmcpd.log` (falling back to `/tmp/nmcpd.log` if permissions are denied).
+`mcpd` has two execution modes:
+1. **Background Daemon Mode (Default)**: Best for running permanently inside the VM (e.g., at boot time). It automatically forks itself into the background, boots the secure HTTPS server, and redirects logs to `/var/log/mcpd.log` (falling back to `/tmp/mcpd.log` if permissions are denied).
 2. **Foreground Mode (`-f` / `--foreground`)**: Best for debugging or direct client pipe launching. Defaults to Stdio transport, but can run the HTTPS server in the foreground using `-t http`.
 
 ### Command Line Flags
@@ -121,16 +121,16 @@ chmod +x /usr/local/bin/nmcpd
 * `-t`, `--transport` (`stdio`, `http`, or `sse`): Selects the MCP transport mechanism (defaults to `stdio` in foreground, `http` in daemon mode).
 * `-p`, `--port` (default: `8000`): Port to bind the server to.
 * `-h`, `--host` (default: `0.0.0.0` in daemon, `127.0.0.1` in foreground): Bind address for the server.
-* `--log` (default: `/var/log/nmcpd.log`): Path to output log files when daemonized.
+* `--log` (default: `/var/log/mcpd.log`): Path to output log files when daemonized.
 * `--api-key` (optional): Set a token/API key requirement to protect HTTP/SSE endpoints.
-* `--api-key-file` (default: `/usr/local/etc/nmcpd.conf`): Path to file containing the API key. Reads automatically if the file exists.
+* `--api-key-file` (default: `/usr/local/etc/mcpd.conf`): Path to file containing the API key. Reads automatically if the file exists.
 * `--tls-cert` (optional): Path to custom TLS certificate file in PEM format. If not provided (along with `--tls-key`), a transient self-signed ECDSA certificate will be generated and used to run HTTPS.
 * `--tls-key` (optional): Path to custom TLS private key file in PEM format.
 
 ---
 
 ### 1. Stdio Integration over SSH (Claude Desktop / Local Agents)
-You can configure your local Claude Desktop to run `nmcpd` inside the VM via SSH over Stdio. To prevent it from detaching and running as a daemon, **you must pass the `-f` (foreground) flag**. Since the binary runs system commands (`apt-get`, `useradd`, `systemctl`), it must run with root privileges inside the VM.
+You can configure your local Claude Desktop to run `mcpd` inside the VM via SSH over Stdio. To prevent it from detaching and running as a daemon, **you must pass the `-f` (foreground) flag**. Since the binary runs system commands (`apt-get`, `useradd`, `systemctl`), it must run with root privileges inside the VM.
 
 Add the following to your local `claude_desktop_config.json`:
 
@@ -142,7 +142,7 @@ Add the following to your local `claude_desktop_config.json`:
       "args": [
         "-t",
         "root@vm-ip-or-hostname",
-        "/usr/local/bin/nmcpd",
+        "/usr/local/bin/mcpd",
         "-f"
       ]
     }
@@ -152,25 +152,25 @@ Add the following to your local `claude_desktop_config.json`:
 > **Note**: Ensure passwordless SSH keys are configured for `root` on your VM, so the connection establishes instantly without interactive prompts.
 
 ### 2. Streamable HTTP Daemon Integration (HTTPS and Auth)
-To run `nmcpd` as a background daemon at VM boot, simply execute the binary. It will self-daemonize, write logs to the background log file, and listen for incoming HTTPS connections:
+To run `mcpd` as a background daemon at VM boot, simply execute the binary. It will self-daemonize, write logs to the background log file, and listen for incoming HTTPS connections:
 
 ```bash
-# Start as a daemon loading API key securely from the default file path (/usr/local/etc/nmcpd.conf)
-/usr/local/bin/nmcpd
+# Start as a daemon loading API key securely from the default file path (/usr/local/etc/mcpd.conf)
+/usr/local/bin/mcpd
 
 # Alternatively, specify a custom key file path
-/usr/local/bin/nmcpd --api-key-file "/etc/my-custom-key.conf"
+/usr/local/bin/mcpd --api-key-file "/etc/my-custom-key.conf"
 ```
 
 Logs are written in structured JSON. You can customize the log detail using the `LOG_LEVEL` environment variable:
 ```bash
-LOG_LEVEL=DEBUG /usr/local/bin/nmcpd
+LOG_LEVEL=DEBUG /usr/local/bin/mcpd
 ```
 
 #### Running under systemd
-If running `nmcpd` as a `systemd` service, it is highly recommended to use `Type=simple` and run the binary in the foreground. Since `systemd` tracks the process lifecycle and manages logging, running in daemon mode will cause systemd to think the service has exited (as the parent process exits immediately after launching the daemon child), leading to constant restarts.
+If running `mcpd` as a `systemd` service, it is highly recommended to use `Type=simple` and run the binary in the foreground. Since `systemd` tracks the process lifecycle and manages logging, running in daemon mode will cause systemd to think the service has exited (as the parent process exits immediately after launching the daemon child), leading to constant restarts.
 
-Use the following configuration for your systemd service file (typically at `/etc/systemd/system/nmcpd.service`):
+Use the following configuration for your systemd service file (typically at `/etc/systemd/system/mcpd.service`):
 
 ```ini
 [Unit]
@@ -179,7 +179,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/sbin/nmcpd --foreground --transport http --host 0.0.0.0
+ExecStart=/usr/local/sbin/mcpd --foreground --transport http --host 0.0.0.0
 Restart=on-failure
 RestartSec=5
 

@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"nmcpd/internal/mcp"
+	"mcpd/internal/mcp"
 )
 
 // GetUserManageToolDefinition returns the MCP Tool definition for user management.

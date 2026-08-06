@@ -30,15 +30,15 @@ jobs:
       run: |
         go test -v ./...
         mkdir -p ./dist
-        CGO_ENABLED=0 go build -o ./dist/nmcpd.x86_64 -ldflags="-s -w -extldflags '-static'" -v ./cmd/nmcpd
+        CGO_ENABLED=0 go build -o ./dist/mcpd.x86_64 -ldflags="-s -w -extldflags '-static'" -v ./cmd/mcpd
         ls -la ./dist
         
     - name: Publish GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-          files: ./dist/nmcpd.x86_64
+          files: ./dist/mcpd.x86_64
           draft: false
-          prerelease: true
+          prerelease: false
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}    
 

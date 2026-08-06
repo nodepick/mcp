@@ -1,4 +1,4 @@
-module nmcpd
+module mcpd
 
 go 1.25.0
 

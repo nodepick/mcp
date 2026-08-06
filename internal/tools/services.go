@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"nmcpd/internal/mcp"
+	"mcpd/internal/mcp"
 )
 
 // GetServicesToolDefinition returns the MCP Tool definition for systemd services management.

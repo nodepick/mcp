@@ -1,4 +1,4 @@
-// Package main is the entry point for the nmcpd service.
+// Package main is the entry point for the mcpd service.
 // It supports both foreground (stdio/sse) mode and background daemonization.
 package main
 
@@ -23,8 +23,8 @@ import (
 	"syscall"
 	"time"
 
-	custom_mcp "nmcpd/internal/mcp"
-	"nmcpd/internal/tools"
+	custom_mcp "mcpd/internal/mcp"
+	"mcpd/internal/tools"
 
 	official_mcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -44,7 +44,7 @@ func generateSelfSignedCert() (tls.Certificate, error) {
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization: []string{"nodepick-nmcpd"},
+			Organization: []string{"nodepick-mcpd"},
 			CommonName:   "localhost",
 		},
 		NotBefore:             time.Now(),
@@ -123,10 +123,10 @@ func main() {
 	host := flag.String("host", "", "Host address to bind the HTTP server to. (Defaults to '127.0.0.1' in foreground, '0.0.0.0' in daemon)")
 	flag.StringVar(host, "h", "", "Host address (shorthand)")
 
-	logPath := flag.String("log", "/var/log/nmcpd.log", "Path to log file when running in background daemon mode")
+	logPath := flag.String("log", "/var/log/mcpd.log", "Path to log file when running in background daemon mode")
 
 	apiKey := flag.String("api-key", "", "API key required to authenticate HTTP/SSE requests (optional)")
-	apiKeyFile := flag.String("api-key-file", "/usr/local/etc/nmcpd.conf", "Path to file containing the API key (optional)")
+	apiKeyFile := flag.String("api-key-file", "/usr/local/etc/mcpd.conf", "Path to file containing the API key (optional)")
 	tlsCert := flag.String("tls-cert", "", "Path to custom TLS certificate PEM file (optional)")
 	tlsKey := flag.String("tls-key", "", "Path to custom TLS private key PEM file (optional)")
 
@@ -144,14 +144,14 @@ func main() {
 				slog.Error("Failed to read API key file", "path", *apiKeyFile, "error", err)
 				os.Exit(1)
 			}
-		} else if *apiKeyFile != "/usr/local/etc/nmcpd.conf" {
+		} else if *apiKeyFile != "/usr/local/etc/mcpd.conf" {
 			slog.Error("API key file not found", "path", *apiKeyFile)
 			os.Exit(1)
 		}
 	}
 
 	// 2. Resolve Default Values based on Execution Mode
-	isDaemonChild := os.Getenv("_NMCPD_DAEMON") == "1"
+	isDaemonChild := os.Getenv("_MCPD_DAEMON") == "1"
 	isForeground := *foreground || isDaemonChild
 
 	// Resolve Transport
@@ -184,13 +184,13 @@ func main() {
 
 		// Prepare command arguments, ensuring flags are passed to the daemonized child
 		cmd := exec.Command(exe, os.Args[1:]...)
-		cmd.Env = append(os.Environ(), "_NMCPD_DAEMON=1")
+		cmd.Env = append(os.Environ(), "_MCPD_DAEMON=1")
 
 		// Attempt to open the log file, falling back to /tmp if permissions are denied
 		logFile, err := os.OpenFile(*logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640)
 		if err != nil {
 			// Fallback to tmp
-			fallbackPath := "/tmp/nmcpd.log"
+			fallbackPath := "/tmp/mcpd.log"
 			logFile, err = os.OpenFile(fallbackPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 			if err != nil {
 				logFile, _ = os.OpenFile(os.DevNull, os.O_WRONLY, 0)
@@ -212,7 +212,7 @@ func main() {
 		}
 
 		// Print clean summary to stdout and exit parent process
-		fmt.Printf("nmcpd starting in background (pid: %d, log: %s)\n", cmd.Process.Pid, *logPath)
+		fmt.Printf("mcpd starting in background (pid: %d, log: %s)\n", cmd.Process.Pid, *logPath)
 		os.Exit(0)
 	}
 
@@ -233,9 +233,9 @@ func main() {
 	slog.SetDefault(logger)
 
 	if isDaemonChild {
-		slog.Info("nmcpd daemon process starting", "pid", os.Getpid(), "transport", resolvedTransport)
+		slog.Info("mcpd daemon process starting", "pid", os.Getpid(), "transport", resolvedTransport)
 	} else {
-		slog.Info("nmcpd foreground process starting", "pid", os.Getpid(), "transport", resolvedTransport)
+		slog.Info("mcpd foreground process starting", "pid", os.Getpid(), "transport", resolvedTransport)
 	}
 
 	// 5. Setup Context and Signal Handling for Graceful Shutdown
@@ -253,7 +253,7 @@ func main() {
 
 	// 6. Instantiate the official MCP Server
 	officialServer := official_mcp.NewServer(&official_mcp.Implementation{
-		Name:    "nmcp",
+		Name:    "mcpd",
 		Version: "1.0.0",
 	}, &official_mcp.ServerOptions{
 		Capabilities: &official_mcp.ServerCapabilities{},
@@ -387,5 +387,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	slog.Info("nmcpd server shutdown complete")
+	slog.Info("mcpd server shutdown complete")
 }
