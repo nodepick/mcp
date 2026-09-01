@@ -27,6 +27,7 @@ import (
 	"mcpd/internal/tools"
 
 	official_mcp "github.com/modelcontextprotocol/go-sdk/mcp"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 func generateSelfSignedCert() (tls.Certificate, error) {
@@ -129,8 +130,36 @@ func main() {
 	apiKeyFile := flag.String("api-key-file", "/usr/local/etc/mcpd.conf", "Path to file containing the API key (optional)")
 	tlsCert := flag.String("tls-cert", "", "Path to custom TLS certificate PEM file (optional)")
 	tlsKey := flag.String("tls-key", "", "Path to custom TLS private key PEM file (optional)")
+	selfSigned := flag.Bool("self-signed", false, "Use a transient self-signed certificate instead of Let's Encrypt")
+	domain := flag.String("domain", "", "Domain name for automatic Let's Encrypt certificate (requires public DNS and ports 80/443)")
+	certCache := flag.String("cert-cache", "/var/lib/mcpd/certs", "Directory to cache Let's Encrypt certificates")
+	noTLS := flag.Bool("no-tls", false, "Disable TLS and serve unencrypted plain-text HTTP")
 
 	flag.Parse()
+
+	// Validate mutually exclusive TLS/encryption modes: --tls-cert/--tls-key, --self-signed, --domain, --no-tls
+	tlsModeCount := 0
+	if *tlsCert != "" || *tlsKey != "" {
+		tlsModeCount++
+	}
+	if *selfSigned {
+		tlsModeCount++
+	}
+	if *domain != "" {
+		tlsModeCount++
+	}
+	if *noTLS {
+		tlsModeCount++
+	}
+	if tlsModeCount > 1 {
+		fmt.Fprintln(os.Stderr, "Error: Only one TLS/encryption mode may be used at a time: --tls-cert/--tls-key, --self-signed, --domain, or --no-tls")
+		os.Exit(1)
+	}
+	// --tls-cert and --tls-key must both be provided if either is
+	if (*tlsCert == "") != (*tlsKey == "") {
+		fmt.Fprintln(os.Stderr, "Error: --tls-cert and --tls-key must both be provided")
+		os.Exit(1)
+	}
 
 	// Resolve API key
 	resolvedAPIKey := *apiKey
@@ -341,46 +370,95 @@ func main() {
 			Handler: handler,
 		}
 
-		var cert tls.Certificate
-		var err error
-		if *tlsCert != "" && *tlsKey != "" {
-			slog.Info("Loading custom TLS certificate pair", "cert", *tlsCert, "key", *tlsKey)
-			cert, err = tls.LoadX509KeyPair(*tlsCert, *tlsKey)
-		} else {
-			slog.Info("Generating transient self-signed ECDSA certificate for HTTPS...")
-			cert, err = generateSelfSignedCert()
-		}
-		if err != nil {
-			slog.Error("Failed to configure TLS", "error", err)
-			os.Exit(1)
-		}
-
-		srv.TLSConfig = &tls.Config{
-			Certificates: []tls.Certificate{cert},
-
-			// Minimum TLS version 1.2
-			MinVersion: tls.VersionTLS12,
-			// Allow post-quantum key exchange as preferred, with fallbacks to standard curves for compatibility with LibreSSL/3.3.6
-			CurvePreferences: []tls.CurveID{
-				tls.X25519MLKEM768,
-				tls.X25519,
-				tls.CurveP256,
-				tls.CurveP384,
-				tls.CurveP521,
-			},
-		}
-
-		// Setup graceful HTTP server shutdown on cancellation context
+		// Setup graceful HTTP/HTTPS server shutdown on cancellation context
 		go func() {
 			<-ctx.Done()
 			slog.Info("Shutting down HTTP server...")
 			_ = srv.Shutdown(context.Background())
 		}()
 
-		slog.Info("Starting HTTPS server", "transport", resolvedTransport, "host", resolvedHost, "port", *port)
-		if err := srv.ListenAndServeTLS("", ""); err != http.ErrServerClosed {
-			slog.Error("HTTPS server failed", "error", err)
-			os.Exit(1)
+		if *noTLS {
+			// Mode 0: Plain HTTP mode (TLS disabled)
+			slog.Warn("Starting plain HTTP server (TLS disabled / insecure)", "transport", resolvedTransport, "host", resolvedHost, "port", *port)
+			if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+				slog.Error("HTTP server failed", "error", err)
+				os.Exit(1)
+			}
+		} else {
+			// Configure TLS based on the selected mode.
+			// Priority: --tls-cert/--tls-key > --domain (Let's Encrypt) > --self-signed (default)
+			if *tlsCert != "" && *tlsKey != "" {
+				// Mode 1: User-provided certificate files
+				slog.Info("Loading custom TLS certificate pair", "cert", *tlsCert, "key", *tlsKey)
+				cert, err := tls.LoadX509KeyPair(*tlsCert, *tlsKey)
+				if err != nil {
+					slog.Error("Failed to load TLS certificate pair", "error", err)
+					os.Exit(1)
+				}
+				srv.TLSConfig = &tls.Config{
+					Certificates: []tls.Certificate{cert},
+					MinVersion:   tls.VersionTLS12,
+					CurvePreferences: []tls.CurveID{
+						tls.X25519MLKEM768,
+						tls.X25519,
+						tls.CurveP256,
+						tls.CurveP384,
+						tls.CurveP521,
+					},
+				}
+			} else if *domain != "" {
+				// Mode 2: Automatic Let's Encrypt certificate via ACME
+				slog.Info("Configuring Let's Encrypt autocert", "domain", *domain, "cache", *certCache)
+				m := &autocert.Manager{
+					Prompt:     autocert.AcceptTOS,
+					HostPolicy: autocert.HostWhitelist(*domain),
+					Cache:      autocert.DirCache(*certCache),
+				}
+				srv.TLSConfig = m.TLSConfig()
+				srv.TLSConfig.MinVersion = tls.VersionTLS12
+				srv.TLSConfig.CurvePreferences = []tls.CurveID{
+					tls.X25519MLKEM768,
+					tls.X25519,
+					tls.CurveP256,
+					tls.CurveP384,
+					tls.CurveP521,
+				}
+
+				// Start HTTP listener on :80 for ACME HTTP-01 challenges and HTTP→HTTPS redirect
+				go func() {
+					httpAddr := resolvedHost + ":80"
+					slog.Info("Starting HTTP listener for ACME challenges and HTTPS redirect", "addr", httpAddr)
+					redirectHandler := m.HTTPHandler(nil) // nil falls through to redirect
+					if err := http.ListenAndServe(httpAddr, redirectHandler); err != nil {
+						slog.Error("HTTP challenge listener failed", "error", err)
+					}
+				}()
+			} else {
+				// Mode 3: Self-signed certificate (default, or explicit --self-signed)
+				slog.Info("Generating transient self-signed ECDSA certificate for HTTPS...")
+				cert, err := generateSelfSignedCert()
+				if err != nil {
+					slog.Error("Failed to generate self-signed certificate", "error", err)
+					os.Exit(1)
+				}
+				srv.TLSConfig = &tls.Config{
+					Certificates: []tls.Certificate{cert},
+					MinVersion:   tls.VersionTLS12,
+					CurvePreferences: []tls.CurveID{
+						tls.X25519MLKEM768,
+						tls.X25519,
+						tls.CurveP256,
+						tls.CurveP384,
+						tls.CurveP521,
+					},
+				}
+			}
+
+			slog.Info("Starting HTTPS server", "transport", resolvedTransport, "host", resolvedHost, "port", *port)
+			if err := srv.ListenAndServeTLS("", ""); err != http.ErrServerClosed {
+				slog.Error("HTTPS server failed", "error", err)
+				os.Exit(1)
+			}
 		}
 	} else {
 		slog.Error("Unsupported transport protocol", "transport", resolvedTransport)

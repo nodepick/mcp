@@ -124,8 +124,12 @@ chmod +x /usr/local/bin/mcpd
 * `--log` (default: `/var/log/mcpd.log`): Path to output log files when daemonized.
 * `--api-key` (optional): Set a token/API key requirement to protect HTTP/SSE endpoints.
 * `--api-key-file` (default: `/usr/local/etc/mcpd.conf`): Path to file containing the API key. Reads automatically if the file exists.
-* `--tls-cert` (optional): Path to custom TLS certificate file in PEM format. If not provided (along with `--tls-key`), a transient self-signed ECDSA certificate will be generated and used to run HTTPS.
-* `--tls-key` (optional): Path to custom TLS private key file in PEM format.
+* `--self-signed`: Use a transient self-signed ECDSA certificate (default behavior when no TLS mode is specified).
+* `--domain` (optional): Domain name for automatic Let's Encrypt certificates (requires public DNS and ports 80/443).
+* `--cert-cache` (default: `/var/lib/mcpd/certs`): Directory to cache Let's Encrypt certificates.
+* `--tls-cert` (optional): Path to custom TLS certificate file in PEM format (must be paired with `--tls-key`).
+* `--tls-key` (optional): Path to custom TLS private key file in PEM format (must be paired with `--tls-cert`).
+* `--no-tls`: Disables TLS and serves unencrypted plain-text HTTP (useful when behind reverse proxies or in private networks).
 
 ---
 
