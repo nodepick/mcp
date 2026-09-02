@@ -119,7 +119,7 @@ chmod +x /usr/local/bin/mcpd
 
 * `-f`, `--foreground`: Runs the server in the foreground instead of daemonizing.
 * `-t`, `--transport` (`stdio`, `http`, or `sse`): Selects the MCP transport mechanism (defaults to `stdio` in foreground, `http` in daemon mode).
-* `-p`, `--port` (default: `8000`): Port to bind the server to.
+* `-p`, `--port` (default: `8444`): Port to bind the server to.
 * `-h`, `--host` (default: `0.0.0.0` in daemon, `127.0.0.1` in foreground): Bind address for the server.
 * `--log` (default: `/var/log/mcpd.log`): Path to output log files when daemonized.
 * `--api-key` (optional): Set a token/API key requirement to protect HTTP/SSE endpoints.

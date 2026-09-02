@@ -118,8 +118,8 @@ func main() {
 	transport := flag.String("transport", "", "Transport protocol to use: 'stdio' or 'http'. (Defaults to 'stdio' in foreground, 'http' in daemon)")
 	flag.StringVar(transport, "t", "", "Transport protocol (shorthand)")
 
-	port := flag.String("port", "8000", "Port to bind the HTTP server to")
-	flag.StringVar(port, "p", "8000", "Port (shorthand)")
+	port := flag.String("port", "8444", "Port to bind the HTTP server to")
+	flag.StringVar(port, "p", "8444", "Port (shorthand)")
 
 	host := flag.String("host", "", "Host address to bind the HTTP server to. (Defaults to '127.0.0.1' in foreground, '0.0.0.0' in daemon)")
 	flag.StringVar(host, "h", "", "Host address (shorthand)")
