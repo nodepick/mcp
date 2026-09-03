@@ -9,7 +9,7 @@ It is built using the official [Model Context Protocol Go SDK](https://github.co
 ## 🚀 Key Features
 
 * **Official SDK Compliance**: Built directly on top of `github.com/modelcontextprotocol/go-sdk/mcp`, natively exposing standardized transports, session life-cycles, and tool capability validation.
-* **Default HTTPS/TLS**: Serves over HTTPS by default. Automatically generates and runs a transient self-signed ECDSA certificate in memory at startup if custom TLS certs are not provided—allowing immediate, secure-by-default, zero-configuration network deployment.
+* **HTTP / SSE Transport**: Serves unencrypted plain HTTP by default on `127.0.0.1:8444`. Designed to run behind a reverse proxy (e.g., Nginx, Caddy, Cloudflare Tunnel, or Envoy) where TLS is terminated.
 * **Token Authentication & Middleware**: Protects endpoints using API keys. Support is built-in for key validation via `X-API-Key` headers, `Authorization: Bearer <key>` headers, or fallback URL query parameters.
 * **Preservation of Unix Permissions**: Automatically reads, stores, and restores original file permissions when writing or patching files in `/etc`, maintaining system security compliance.
 * **Smart Service Handling**: Non-zero exits from systemctl queries (like stopped service states) are reported as standard text outputs rather than tool invocation failures.
@@ -112,24 +112,18 @@ chmod +x /usr/local/bin/mcpd
 ## 🖥️ Running & Using mcpd
 
 `mcpd` has two execution modes:
-1. **Background Daemon Mode (Default)**: Best for running permanently inside the VM (e.g., at boot time). It automatically forks itself into the background, boots the secure HTTPS server, and redirects logs to `/var/log/mcpd.log` (falling back to `/tmp/mcpd.log` if permissions are denied).
-2. **Foreground Mode (`-f` / `--foreground`)**: Best for debugging or direct client pipe launching. Defaults to Stdio transport, but can run the HTTPS server in the foreground using `-t http`.
+1. **Background Daemon Mode (Default)**: Best for running permanently inside the VM (e.g., at boot time). It automatically forks itself into the background, boots the HTTP server on `127.0.0.1:8444`, and redirects logs to `/var/log/mcpd.log` (falling back to `/tmp/mcpd.log` if permissions are denied).
+2. **Foreground Mode (`-f` / `--foreground`)**: Best for debugging or direct client pipe launching. Defaults to Stdio transport, but can run the HTTP server in the foreground using `-t http`.
 
 ### Command Line Flags
 
 * `-f`, `--foreground`: Runs the server in the foreground instead of daemonizing.
 * `-t`, `--transport` (`stdio`, `http`, or `sse`): Selects the MCP transport mechanism (defaults to `stdio` in foreground, `http` in daemon mode).
 * `-p`, `--port` (default: `8444`): Port to bind the server to.
-* `-h`, `--host` (default: `0.0.0.0` in daemon, `127.0.0.1` in foreground): Bind address for the server.
+* `-h`, `--host` (default: `127.0.0.1`): Bind address for the server.
 * `--log` (default: `/var/log/mcpd.log`): Path to output log files when daemonized.
 * `--api-key` (optional): Set a token/API key requirement to protect HTTP/SSE endpoints.
 * `--api-key-file` (default: `/usr/local/etc/mcpd.conf`): Path to file containing the API key. Reads automatically if the file exists.
-* `--self-signed`: Use a transient self-signed ECDSA certificate (default behavior when no TLS mode is specified).
-* `--domain` (optional): Domain name for automatic Let's Encrypt certificates (requires public DNS and ports 80/443).
-* `--cert-cache` (default: `/var/lib/mcpd/certs`): Directory to cache Let's Encrypt certificates.
-* `--tls-cert` (optional): Path to custom TLS certificate file in PEM format (must be paired with `--tls-key`).
-* `--tls-key` (optional): Path to custom TLS private key file in PEM format (must be paired with `--tls-cert`).
-* `--no-tls`: Disables TLS and serves unencrypted plain-text HTTP (useful when behind reverse proxies or in private networks).
 
 ---
 
@@ -155,8 +149,8 @@ Add the following to your local `claude_desktop_config.json`:
 ```
 > **Note**: Ensure passwordless SSH keys are configured for `root` on your VM, so the connection establishes instantly without interactive prompts.
 
-### 2. Streamable HTTP Daemon Integration (HTTPS and Auth)
-To run `mcpd` as a background daemon at VM boot, simply execute the binary. It will self-daemonize, write logs to the background log file, and listen for incoming HTTPS connections:
+### 2. Streamable HTTP Daemon Integration (HTTP and Auth)
+To run `mcpd` as a background daemon at VM boot, simply execute the binary. It will self-daemonize, write logs to the background log file, and listen for incoming HTTP connections (defaulting to `127.0.0.1:8444`):
 
 ```bash
 # Start as a daemon loading API key securely from the default file path (/usr/local/etc/mcpd.conf)
@@ -183,7 +177,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/sbin/mcpd --foreground --transport http --host 0.0.0.0
+ExecStart=/usr/local/sbin/mcpd --foreground --transport http
 Restart=on-failure
 RestartSec=5
 
