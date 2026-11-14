@@ -33,7 +33,7 @@ func authMiddleware(apiKey string, next http.Handler) http.Handler {
 			return
 		}
 
-		token := r.Header.Get("X-API-Key")
+		token := r.Header.Get("X-MCP-Key")
 		if token == "" {
 			authHeader := r.Header.Get("Authorization")
 			if strings.HasPrefix(authHeader, "Bearer ") {

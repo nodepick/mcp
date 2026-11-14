@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -34,8 +33,9 @@ func TestLoadOrCreateConfig_CreatesNewFile(t *testing.T) {
 		t.Fatalf("failed to read generated config: %v", err)
 	}
 	content := string(raw)
-	if !strings.Contains(content, "[auth]") || !strings.Contains(content, `api_key = "`+cfg.Auth.APIKey+`"`) {
-		t.Errorf("unexpected TOML content:\n%s", content)
+	expected := "[auth]\napi_key = \"" + cfg.Auth.APIKey + "\"\n"
+	if content != expected {
+		t.Errorf("expected TOML content:\n%q\ngot:\n%q", expected, content)
 	}
 
 	// Subsequent load should reuse the exact same key without recreating.

@@ -39,7 +39,9 @@ func writeConfig(path string, cfg Config) error {
 	}
 
 	var buf bytes.Buffer
-	if err := toml.NewEncoder(&buf).Encode(cfg); err != nil {
+	enc := toml.NewEncoder(&buf)
+	enc.Indent = ""
+	if err := enc.Encode(cfg); err != nil {
 		return fmt.Errorf("encode config: %w", err)
 	}
 

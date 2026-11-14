@@ -10,7 +10,7 @@ It is built using the official [Model Context Protocol Go SDK](https://github.co
 
 * **Official SDK Compliance**: Built directly on top of `github.com/modelcontextprotocol/go-sdk/mcp`, natively exposing standardized transports, session life-cycles, and tool capability validation.
 * **HTTP / SSE Transport**: Serves unencrypted plain HTTP by default on `127.0.0.1:8444`. Designed to run behind a reverse proxy (e.g., Nginx, Caddy, Cloudflare Tunnel, or Envoy) where TLS is terminated.
-* **Token Authentication & Middleware**: Protects endpoints using API keys. Support is built-in for key validation via `X-API-Key` headers, `Authorization: Bearer <key>` headers, or fallback URL query parameters.
+* **Token Authentication & Middleware**: Protects endpoints using API keys. Support is built-in for key validation via `X-MCP-Key` headers, `Authorization: Bearer <key>` headers, or fallback URL query parameters.
 * **Preservation of Unix Permissions**: Automatically reads, stores, and restores original file permissions when writing or patching files in `/etc`, maintaining system security compliance.
 * **Smart Service Handling**: Non-zero exits from systemctl queries (like stopped service states) are reported as standard text outputs rather than tool invocation failures.
 
