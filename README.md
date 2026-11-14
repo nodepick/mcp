@@ -88,6 +88,15 @@ It is built using the official [Model Context Protocol Go SDK](https://github.co
 
 ## 🛠️ Build and Installation
 
+### Install Service via Script (Recommended)
+To install `mcpd` and configure it as a `systemd` service on a Linux VM (`x86_64` or `aarch64`), run:
+```bash
+curl -LsSf https://raw.githubusercontent.com/nodepick/mcp/main/scripts/install.sh | sudo sh
+```
+*(If you are already running as `root`, you can omit `sudo`: `curl -LsSf https://raw.githubusercontent.com/nodepick/mcp/main/scripts/install.sh | sh`.)*
+
+The installer downloads the latest release binary to `/usr/local/sbin/mcpd`, writes `/etc/systemd/system/mcpd.service`, and enables and starts the `mcpd` service.
+
 ### Compile the Binary
 Prerequisite: Go 1.25 or newer.
 
@@ -96,7 +105,7 @@ To build the static production binary, run:
 go build -o mcpd ./cmd/mcpd
 ```
 
-### Install in VM
+### Manual Install in VM
 Copy the generated `mcpd` binary to the virtual machine (for example, to `/usr/local/bin/mcpd`):
 ```bash
 scp mcpd user@vm-ip:/usr/local/bin/mcpd
@@ -122,8 +131,7 @@ chmod +x /usr/local/bin/mcpd
 * `-p`, `--port` (default: `8444`): Port to bind the server to.
 * `-h`, `--host` (default: `127.0.0.1`): Bind address for the server.
 * `--log` (default: `/var/log/mcpd.log`): Path to output log files when daemonized.
-* `--api-key` (optional): Set a token/API key requirement to protect HTTP/SSE endpoints.
-* `--api-key-file` (default: `/usr/local/etc/mcpd.conf`): Path to file containing the API key. Reads automatically if the file exists.
+* `--config` (default: `/usr/local/etc/mcpd.conf`): Path to the TOML configuration file. If the file or `auth.api_key` does not exist, `mcpd` creates it and auto-generates an API key.
 
 ---
 
@@ -153,11 +161,17 @@ Add the following to your local `claude_desktop_config.json`:
 To run `mcpd` as a background daemon at VM boot, simply execute the binary. It will self-daemonize, write logs to the background log file, and listen for incoming HTTP connections (defaulting to `127.0.0.1:8444`):
 
 ```bash
-# Start as a daemon loading API key securely from the default file path (/usr/local/etc/mcpd.conf)
+# Start as a daemon using the default TOML config (/usr/local/etc/mcpd.conf; created with an auto-generated API key if missing)
 /usr/local/bin/mcpd
 
-# Alternatively, specify a custom key file path
-/usr/local/bin/mcpd --api-key-file "/etc/my-custom-key.conf"
+# Alternatively, specify a custom config file path
+/usr/local/bin/mcpd --config "/etc/my-custom-mcpd.conf"
+```
+
+Example `/usr/local/etc/mcpd.conf`:
+```toml
+[auth]
+api_key = "your-api-key"
 ```
 
 Logs are written in structured JSON. You can customize the log detail using the `LOG_LEVEL` environment variable:

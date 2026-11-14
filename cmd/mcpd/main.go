@@ -74,28 +74,27 @@ func main() {
 
 	logPath := flag.String("log", "/var/log/mcpd.log", "Path to log file when running in background daemon mode")
 
-	apiKey := flag.String("api-key", "", "API key required to authenticate HTTP/SSE requests (optional)")
-	apiKeyFile := flag.String("api-key-file", "/usr/local/etc/mcpd.conf", "Path to file containing the API key (optional)")
+	configPath := flag.String("config", defaultConfigPath, "Path to TOML configuration file")
 
 	flag.Parse()
 
-	// Resolve API key
-	resolvedAPIKey := *apiKey
-	if resolvedAPIKey == "" {
-		if _, err := os.Stat(*apiKeyFile); err == nil {
-			data, err := os.ReadFile(*apiKeyFile)
-			if err == nil {
-				resolvedAPIKey = strings.TrimSpace(string(data))
-				slog.Info("Loaded API key from configuration file", "path", *apiKeyFile)
-			} else {
-				slog.Error("Failed to read API key file", "path", *apiKeyFile, "error", err)
-				os.Exit(1)
-			}
-		} else if *apiKeyFile != "/usr/local/etc/mcpd.conf" {
-			slog.Error("API key file not found", "path", *apiKeyFile)
-			os.Exit(1)
-		}
+	resolvedConfigPath := *configPath
+	if resolvedConfigPath == "" {
+		resolvedConfigPath = defaultConfigPath
 	}
+
+	cfg, configCreated, err := loadOrCreateConfig(resolvedConfigPath)
+	if err != nil {
+		slog.Error("Failed to load or create configuration file", "path", resolvedConfigPath, "error", err)
+		os.Exit(1)
+	}
+	if configCreated {
+		slog.Info("Generated configuration file with API key", "path", resolvedConfigPath)
+	} else {
+		slog.Info("Loaded configuration file", "path", resolvedConfigPath)
+	}
+
+	resolvedAPIKey := cfg.Auth.APIKey
 
 	// 2. Resolve Default Values based on Execution Mode
 	isDaemonChild := os.Getenv("_MCPD_DAEMON") == "1"
