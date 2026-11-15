@@ -181,6 +181,7 @@ fi
 chmod 0644 "$CADDYFILE_PATH"
 
 caddy validate --config "$CADDYFILE_PATH"
+chown -R caddy:caddy /var/log/caddy
 
 log "Enabling and starting caddy service..."
 systemctl enable caddy.service
