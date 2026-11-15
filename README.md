@@ -89,13 +89,17 @@ It is built using the official [Model Context Protocol Go SDK](https://github.co
 ## 🛠️ Build and Installation
 
 ### Install Service via Script (Recommended)
-To install `mcpd` and configure it as a `systemd` service on a Linux VM (`x86_64` or `aarch64`), run:
+To install `mcpd` and configure it with Caddy as a `systemd` service on a Debian/Ubuntu Linux VM (`x86_64` or `aarch64`), run:
 ```bash
+# Default (private IP: Caddy serves plain HTTP on :8000 -> localhost:8444)
 curl -LsSf https://raw.githubusercontent.com/nodepick/mcp/main/scripts/install.sh | sudo sh
-```
-*(If you are already running as `root`, you can omit `sudo`: `curl -LsSf https://raw.githubusercontent.com/nodepick/mcp/main/scripts/install.sh | sh`.)*
 
-The installer downloads the latest release binary to `/usr/local/sbin/mcpd`, writes `/etc/systemd/system/mcpd.service`, and enables and starts the `mcpd` service.
+# Public IP (Caddy enables on-demand TLS on https://:8000 -> localhost:8444)
+curl -LsSf https://raw.githubusercontent.com/nodepick/mcp/main/scripts/install.sh | sudo sh -s -- --public-ip
+```
+*(If you are already running as `root`, you can omit `sudo`.)*
+
+The installer downloads the latest `mcpd` release binary to `/usr/local/sbin/mcpd`, writes `/etc/systemd/system/mcpd.service`, installs Caddy via the official APT repository, writes `/etc/caddy/Caddyfile` (plain HTTP on `:8000` by default, or `on_demand` TLS when `--public-ip` is passed), and enables and starts both `mcpd` and `caddy` services.
 
 ### Compile the Binary
 Prerequisite: Go 1.25 or newer.
